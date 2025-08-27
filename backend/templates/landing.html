@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bright Minds Django Admin</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+        .container { max-width: 480px; margin: 80px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.07); padding: 2.5rem 2rem; text-align: center; }
+        h1 { color: #c1121f; font-size: 2.2rem; margin-bottom: 1rem; }
+        p { color: #333; margin-bottom: 2rem; }
+        .btn { display: inline-block; margin: 0 10px; padding: 0.75rem 1.7rem; font-size: 1rem; color: #fff; background: #c1121f; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; transition: background 0.2s; }
+        .btn:hover { background: #a10e18; }
+        .btn-secondary { background: #22223b; }
+        .btn-secondary:hover { background: #4a4e69; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Bright Minds Django Admin</h1>
+        <p>Manage your poetry platform, users, and content here.<br>Use the buttons below to access the Django admin or the API root.</p>
+        <div>
+            <a href="/admin/login/" class="btn">Login as Superuser</a>
+            <a href="/api/" class="btn btn-secondary">API Root</a>
+        </div>
+    </div>
+</body>
+</html>
