@@ -3,9 +3,9 @@ import { toast } from "@/hooks/use-toast";
 import { CommunityAuth } from "@/components/community/CommunityAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-const CommunityDashboard = lazy(() => import('@/components/community/CommunityDashboard'));
-const CommunityMemberView = lazy(() => import('@/components/community/CommunityMemberView'));
-const CommunityFeed = lazy(() => import('@/components/community/CommunityFeed'));
+const CommunityDashboard = lazy(() => import('@/components/community/CommunityDashboard').then(m => ({ default: m.CommunityDashboard })));
+const CommunityMemberView = lazy(() => import('@/components/community/CommunityMemberView').then(m => ({ default: m.CommunityMemberView })));
+const CommunityFeed = lazy(() => import('@/components/community/CommunityFeed').then(m => ({ default: m.CommunityFeed })));
 const Footer = lazy(() => import('@/components/Footer'));
 const NavBar = lazy(() => import('@/components/NavBar'));
 const Hero = lazy(() => import('@/components/Hero'));
@@ -90,7 +90,9 @@ const Community = () => {
               </div>
             </div>
           ) : (
-            <CommunityMemberView userData={userData!} onSignOut={handleSignOut} />
+            <Suspense fallback={<div className="h-24 flex items-center justify-center">Loading community...</div>}>
+              <CommunityMemberView userData={userData!} onSignOut={handleSignOut} />
+            </Suspense>
           )}
         </div>
       </div>
