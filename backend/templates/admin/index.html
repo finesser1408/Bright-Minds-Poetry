@@ -1,0 +1,488 @@
+{% extends "admin/base.html" %}
+{% load i18n static log %}
+
+{% block title %}{% trans 'Dashboard' %} | Bright Minds Poetry Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb-area">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  <span class="sep">›</span>
+  <span>{% trans 'Dashboard' %}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  /* ----- Dashboard specific styles (uses base CSS variables) ----- */
+  .dash-welcome {
+    background: linear-gradient(135deg, var(--sidebar-bg) 0%, var(--sidebar-hover) 100%);
+    border-radius: var(--radius);
+    padding: 1.8rem 2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.8rem;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .dash-welcome::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 320px;
+    height: 320px;
+    background: url("{% static 'admin/images/writing.png' %}") no-repeat center;
+    background-size: contain;
+    opacity: 0.15;
+    pointer-events: none;
+    transform: rotate(-10deg);
+  }
+
+  .dash-welcome-bg-blob {
+    position: absolute;
+    right: 10%;
+    top: -50%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(193, 18, 31, 0.2) 0%, transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dash-welcome img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px;
+    flex-shrink: 0;
+  }
+
+  .dash-welcome-text .greeting {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+
+  .dash-welcome-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .dash-welcome-text p {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 540px;
+  }
+
+  /* Stats grid */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
+  }
+
+  .stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+  }
+
+  /* Modern icon backgrounds using semi-transparent & theme-aware */
+  .stat-icon.poem {
+    background: rgba(193, 18, 31, 0.12);
+    color: var(--accent);
+  }
+
+  .stat-icon.gallery {
+    background: rgba(252, 163, 17, 0.12);
+    color: var(--gold);
+  }
+
+  .stat-icon.message {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+  }
+
+  .stat-icon.user {
+    background: rgba(34, 197, 94, 0.12);
+    color: #22c55e;
+  }
+
+  .stat-info .count {
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .stat-info .label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 1.5rem 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .section-title span {
+    background: var(--accent);
+    width: 24px;
+    height: 2px;
+    display: inline-block;
+    border-radius: 2px;
+  }
+
+  /* App cards grid */
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .app-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+
+  .app-card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    border-color: transparent;
+  }
+
+  .app-card-header {
+    padding: 0.6rem 1rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--module-header);
+    color: #fff;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .app-card-body {
+    padding: 0.25rem 0;
+  }
+
+  .app-model-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .app-model-link:hover {
+    background: var(--row-hover);
+    border-left-color: var(--accent);
+  }
+
+  .app-model-link .model-name {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .app-model-link .model-actions {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .app-model-link .model-actions a {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .app-model-link .model-actions a:hover {
+    background: var(--row-hover);
+    color: var(--accent);
+    transform: scale(1.1);
+  }
+
+  /* Recent actions panel */
+  .recent-actions {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 0.5rem;
+  }
+
+  .recent-actions-header {
+    background: var(--module-header);
+    color: #fff;
+    padding: 0.7rem 1.2rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .recent-action-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.75rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .recent-action-item:last-child {
+    border-bottom: none;
+  }
+
+  .action-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-add {
+    background: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+  }
+
+  .dot-change {
+    background: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+
+  .dot-delete {
+    background: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  }
+
+  .recent-action-item a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .recent-action-item a:hover {
+    text-decoration: underline;
+  }
+
+  .action-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .no-actions {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .dash-welcome {
+      flex-direction: column;
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .dash-welcome::after {
+      display: none;
+    }
+
+    .stat-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .app-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .recent-action-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.4rem;
+    }
+
+    .action-time {
+      margin-left: 0;
+    }
+  }
+</style>
+
+<!-- Welcome banner -->
+<div class="dash-welcome">
+  <div class="dash-welcome-bg-blob"></div>
+  <img src="{% static 'admin/images/logo.png' %}" alt="Logo">
+  <div class="dash-welcome-text" style="position: relative; z-index: 1;">
+    <div class="greeting">{% trans 'Welcome back' %}, {{ user.get_username }}</div>
+    <h1>{% trans 'Bright Minds Poetry' %}</h1>
+    <p>{% trans 'Manage poems, gallery submissions, messages, and users from a single poetic dashboard.' %}</p>
+  </div>
+</div>
+
+<!-- Stats row (dynamically replace counts via context or use custom tags) -->
+<div class="stat-grid">
+  <a href="{% url 'admin:index' %}poetry/poem/" class="stat-card">
+    <div class="stat-icon poem">📝</div>
+    <div class="stat-info">
+      <div class="count">{{ poem_count|default:"—" }}</div>
+      <div class="label">{% trans 'Poems' %}</div>
+    </div>
+  </a>
+  <a href="{% url 'admin:index' %}gallery/galleryitem/" class="stat-card">
+    <div class="stat-icon gallery">🖼️</div>
+    <div class="stat-info">
+      <div class="count">{{ gallery_count|default:"—" }}</div>
+      <div class="label">{% trans 'Gallery items' %}</div>
+    </div>
+  </a>
+  <a href="{% url 'admin:index' %}messages/message/" class="stat-card">
+    <div class="stat-icon message">✉️</div>
+    <div class="stat-info">
+      <div class="count">{{ message_count|default:"—" }}</div>
+      <div class="label">{% trans 'Messages' %}</div>
+    </div>
+  </a>
+  <a href="{% url 'admin:index' %}auth/user/" class="stat-card">
+    <div class="stat-icon user">👥</div>
+    <div class="stat-info">
+      <div class="count">{{ user_count|default:"—" }}</div>
+      <div class="label">{% trans 'Users' %}</div>
+    </div>
+  </a>
+</div>
+
+<!-- Content management apps -->
+<div class="section-title"><span></span> {% trans 'Content Management' %}</div>
+<div class="app-grid">
+  {% for app in app_list %}
+  <div class="app-card">
+    <div class="app-card-header">{{ app.name }}</div>
+    <div class="app-card-body">
+      {% for model in app.models %}
+      <div class="app-model-link">
+        <div class="model-name">
+          <span>
+            {% if 'Poem' in model.name %}📝
+            {% elif 'Gallery' in model.name %}🖼️
+            {% elif 'Message' in model.name %}✉️
+            {% elif 'User' in model.name %}👤
+            {% elif 'Like' in model.name %}❤️
+            {% elif 'Comment' in model.name %}💬
+            {% elif 'Group' in model.name %}👥
+            {% else %}📂{% endif %}
+          </span>
+          <a href="{{ model.admin_url }}" style="text-decoration: none; color: inherit;">{{ model.name }}</a>
+        </div>
+        <div class="model-actions">
+          <a href="{{ model.admin_url }}" title="{% trans 'View list' %}">🔍</a>
+          {% if model.add_url %}
+          <a href="{{ model.add_url }}" title="{% trans 'Add new' %}">➕</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Recent activity -->
+<div class="section-title"><span></span> {% trans 'Recent Activity' %}</div>
+<div class="recent-actions">
+  <div class="recent-actions-header">📋 {% trans 'Latest actions' %}</div>
+  {% get_admin_log 12 as admin_log for_user user %}
+  {% if admin_log %}
+  {% for entry in admin_log %}
+  <div class="recent-action-item">
+    <span
+      class="action-dot {% if entry.is_addition %}dot-add{% elif entry.is_change %}dot-change{% else %}dot-delete{% endif %}"></span>
+    <span>
+      {% if entry.is_addition %}{% trans 'Added' %}
+      {% elif entry.is_change %}{% trans 'Changed' %}
+      {% else %}{% trans 'Deleted' %}{% endif %}
+      {% if entry.get_admin_url %}
+      <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+      {% else %}
+      {{ entry.object_repr }}
+      {% endif %}
+      <span style="opacity:0.6; font-size:0.75rem;">({{ entry.content_type }})</span>
+    </span>
+    <span class="action-time">{{ entry.action_time|timesince }} {% trans 'ago' %}</span>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="no-actions">✨ {% trans 'No recent actions yet. Start by adding a poem or managing gallery.' %}</div>
+  {% endif %}
+</div>
+
+<!-- Optional: You can easily add model counts by passing context variables from your admin view.
+     Example: in your custom AdminSite.index() add:
+     context['poem_count'] = Poem.objects.count()
+     etc. -->
+{% endblock %}

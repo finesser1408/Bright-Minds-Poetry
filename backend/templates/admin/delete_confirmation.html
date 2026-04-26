@@ -1,0 +1,92 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}{% blocktrans with name=object_name %}Delete {{ name }}{% endblocktrans %} | Bright Minds Poetry Admin{% endblock %}
+
+{% block breadcrumbs %}
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+<a href="{% url 'admin:app_list' opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+{{ object|truncatewords:8 }}
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+{% trans 'Delete' %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .del-box {
+    max-width: 680px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow-md);
+  }
+  .del-header {
+    background: #991b1b; color: #fff; padding: 1.2rem 1.5rem;
+    border-bottom: 2px solid #7f1d1d;
+    display: flex; align-items: center; gap: .75rem;
+  }
+  .del-header h1 { font-size: 1.15rem; font-weight: 800; }
+  .del-body { padding: 1.5rem; }
+  .del-body p { font-size: .95rem; color: var(--text); line-height: 1.7; margin-bottom: 1rem; }
+  .del-body strong { color: #991b1b; }
+  .del-related {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 9px;
+    padding: 1rem 1.2rem; margin-bottom: 1.4rem; font-size: .85rem;
+  }
+  .del-related h3 { font-size: .8rem; font-weight: 700; color: #991b1b; margin-bottom: .6rem; text-transform: uppercase; letter-spacing: .06em; }
+  .del-related ul { list-style: none; padding: 0; }
+  .del-related ul li { padding: .25rem 0; color: var(--text); display: flex; align-items: center; gap: .4rem; }
+  .del-related ul li::before { content: '›'; color: #ef4444; font-weight: 700; }
+  .del-actions {
+    display: flex; gap: .8rem; align-items: center; flex-wrap: wrap;
+    padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--bg);
+  }
+  .del-btn-confirm {
+    padding: .65rem 1.5rem; background: #dc2626; color: #fff; border: none;
+    border-radius: 8px; font-size: .9rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: background .18s;
+  }
+  .del-btn-confirm:hover { background: #b91c1c; }
+  .del-btn-cancel {
+    padding: .65rem 1.4rem; background: var(--card-bg); color: var(--text);
+    border: 1.5px solid var(--border); border-radius: 8px; font-size: .9rem;
+    font-weight: 600; text-decoration: none; transition: all .18s;
+  }
+  .del-btn-cancel:hover { border-color: var(--text-muted); }
+</style>
+
+<div class="del-box">
+  <div class="del-header">
+    <span style="font-size:1.8rem;">🗑️</span>
+    <h1>{% blocktrans with name=object_name %}Confirm deletion of {{ name }}{% endblocktrans %}</h1>
+  </div>
+  <div class="del-body">
+    <p>
+      {% blocktrans with object=object %}
+      Are you sure you want to delete <strong>"{{ object }}"</strong>? This action <strong>cannot be undone</strong>.
+      {% endblocktrans %}
+    </p>
+
+    {% if deleted_objects %}
+    <div class="del-related">
+      <h3>⚠️ {% trans 'The following related records will also be deleted:' %}</h3>
+      <ul>
+        {% for obj in deleted_objects %}
+        <li>{{ obj }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <form method="post" action="">
+    {% csrf_token %}
+    <div class="del-actions">
+      <a href="{% url opts|admin_urlname:'changelist' %}" class="del-btn-cancel">← {% trans 'Cancel' %}</a>
+      <input type="submit" value="{% trans 'Yes, delete permanently' %}" class="del-btn-confirm">
+    </div>
+  </form>
+</div>
+{% endblock %}

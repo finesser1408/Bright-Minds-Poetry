@@ -1,0 +1,251 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_urls static admin_list admin_modify %}
+
+{% block title %}{{ cl.opts.verbose_name_plural|capfirst }} | Bright Minds Poetry Admin{% endblock %}
+
+{% block breadcrumbs %}
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+<a href="{% url 'admin:app_list' cl.opts.app_label %}">{{ cl.opts.app_config.verbose_name }}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+{{ cl.opts.verbose_name_plural|capfirst }}
+{% endblock %}
+
+{% block content %}
+<style>
+  .cl-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;
+  }
+  .cl-header-left h1 {
+    font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: .2rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .cl-header-left .subtitle { font-size: .82rem; color: var(--text-muted); }
+  .cl-add-btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .55rem 1.3rem; background: var(--accent); color: #fff !important;
+    border-radius: 8px; font-size: .85rem; font-weight: 700; text-decoration: none;
+    transition: background .18s, transform .15s; white-space: nowrap; line-height: 1;
+  }
+  .cl-add-btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+  .cl-box {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+
+  /* Toolbar / search */
+  #toolbar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .75rem;
+    padding: .9rem 1.2rem; border-bottom: 1px solid var(--border);
+    background: var(--card-bg);
+  }
+  #toolbar form { display: contents; }
+  #toolbar label[for="searchbar"] { font-size: .78rem; font-weight: 600; color: var(--text-muted); }
+  #searchbar {
+    flex: 1; min-width: 200px; padding: .5rem 1rem;
+    border: 1.5px solid var(--border); border-radius: 30px;
+    font-size: .85rem; font-family: inherit; background: var(--bg); color: var(--text);
+    outline: none; transition: border-color .2s;
+  }
+  #searchbar:focus { border-color: var(--accent); background: var(--card-bg); }
+  #toolbar input[type="submit"] {
+    padding: .5rem 1.1rem; background: var(--text); color: #fff;
+    border: none; border-radius: 8px; font-size: .82rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background .18s;
+  }
+  #toolbar input[type="submit"]:hover { background: var(--accent); }
+
+  /* Actions bar */
+  .actions {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .75rem;
+    padding: .75rem 1.2rem; border-bottom: 1px solid var(--border);
+    background: var(--bg); font-size: .84rem;
+  }
+  .actions label { font-weight: 600; color: var(--text-muted); font-size: .8rem; }
+  .actions select {
+    padding: .4rem .7rem; border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: .82rem; font-family: inherit; background: var(--card-bg); color: var(--text);
+    cursor: pointer;
+  }
+  .actions button[type="submit"] {
+    padding: .4rem 1rem; background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; font-size: .8rem; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background .18s;
+  }
+  .actions button[type="submit"]:hover { background: var(--accent-dark); }
+  .actions .action-counter { font-size: .78rem; color: var(--text-muted); margin-left: auto; }
+
+  /* Result table */
+  #result_list {
+    width: 100%; border-collapse: collapse; font-size: .875rem;
+  }
+  #result_list thead th {
+    padding: .8rem 1.1rem; background: var(--bg);
+    font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--text-muted); border-bottom: 2px solid var(--border); text-align: left;
+    white-space: nowrap;
+  }
+  #result_list thead th.action-checkbox-column { width: 40px; text-align: center; }
+  #result_list thead th a { color: var(--text-muted); text-decoration: none; }
+  #result_list thead th a:hover { color: var(--accent); }
+  #result_list thead th.sorted { color: var(--accent); }
+  #result_list thead th.sorted a { color: var(--accent); }
+  #result_list tbody tr { transition: background .12s; }
+  #result_list tbody tr:hover { background: rgba(193,18,31,.03); }
+  #result_list tbody tr:last-child td { border-bottom: none; }
+  #result_list tbody td {
+    padding: .85rem 1.1rem; border-bottom: 1px solid var(--border);
+    vertical-align: middle; color: var(--text);
+  }
+  #result_list tbody td.action-checkbox { text-align: center; }
+  #result_list tbody td a {
+    color: var(--accent); text-decoration: none; font-weight: 600;
+  }
+  #result_list tbody td a:hover { text-decoration: underline; }
+  input[type="checkbox"] { accent-color: var(--accent); width:16px; height:16px; cursor:pointer; }
+
+  /* Empty message */
+  .cl-empty {
+    padding: 3.5rem 2rem; text-align: center; color: var(--text-muted);
+  }
+  .cl-empty .cl-empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .cl-empty h3 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
+  .cl-empty p { font-size: .85rem; }
+
+  /* Paginator */
+  .paginator {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .4rem;
+    padding: .85rem 1.2rem; border-top: 1px solid var(--border);
+    font-size: .82rem; color: var(--text-muted);
+    background: var(--card-bg);
+  }
+  .paginator a {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 30px; height: 30px; padding: 0 .5rem;
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); text-decoration: none; transition: all .15s;
+  }
+  .paginator a:hover { border-color: var(--accent); color: var(--accent); background: rgba(193,18,31,.05); }
+  .paginator .this-page {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 30px; height: 30px; padding: 0 .5rem;
+    background: var(--accent); color: #fff; border-radius: 6px; font-weight: 700;
+  }
+  .paginator .showall { font-size: .78rem; }
+
+  /* Filter panel */
+  #changelist-filter {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; min-width: 220px;
+  }
+  #changelist-filter h2 {
+    background: var(--text) !important; color: #fff !important;
+    padding: .75rem 1rem; font-size: .72rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; border-bottom: 2px solid var(--accent); margin: 0;
+  }
+  #changelist-filter h3 {
+    padding: .6rem 1rem .2rem; font-size: .68rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 0;
+  }
+  #changelist-filter ul { list-style: none; margin: 0; padding: .2rem 0; }
+  #changelist-filter li { padding: 0; }
+  #changelist-filter li a {
+    display: block; padding: .4rem 1rem; font-size: .83rem; color: var(--text);
+    text-decoration: none; transition: all .15s; border-left: 3px solid transparent;
+  }
+  #changelist-filter li a:hover { background: rgba(193,18,31,.05); border-left-color: var(--gold); color: var(--accent); }
+  #changelist-filter li.selected a { border-left-color: var(--accent); color: var(--accent); font-weight: 700; background: rgba(193,18,31,.06); }
+
+  /* Date hierarchy */
+  .xfull { border-bottom: 1px solid var(--border); }
+  .xfull ul { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; padding: .65rem 1.2rem; margin: 0; }
+  .xfull ul li a { color: var(--accent); text-decoration: none; font-size: .82rem; font-weight: 500; }
+  .xfull ul li a:hover { text-decoration: underline; }
+  .xfull ul li.selected a { font-weight: 700; }
+
+  /* Layout with filter */
+  .cl-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+  .cl-layout-main { flex: 1; min-width: 0; }
+</style>
+
+<!-- Page header -->
+<div class="cl-header">
+  <div class="cl-header-left">
+    <h1>
+      {% if cl.opts.verbose_name == 'poem' %}📝
+      {% elif cl.opts.verbose_name == 'gallery item' %}🖼️
+      {% elif cl.opts.verbose_name == 'message' %}✉️
+      {% elif 'user' in cl.opts.verbose_name %}👤
+      {% elif 'comment' in cl.opts.verbose_name %}💬
+      {% elif 'like' in cl.opts.verbose_name %}❤️
+      {% elif 'group' in cl.opts.verbose_name %}👥
+      {% else %}📂{% endif %}
+      {{ cl.opts.verbose_name_plural|capfirst }}
+    </h1>
+    <div class="subtitle">
+      {% blocktrans with count=cl.result_count %}{{ count }} record{{ count|pluralize }} found{% endblocktrans %}
+    </div>
+  </div>
+  {% if has_add_permission %}
+  <a href="{% url cl.opts|admin_urlname:'add' %}" class="cl-add-btn">
+    + {% blocktrans with name=cl.opts.verbose_name %}Add {{ name }}{% endblocktrans %}
+  </a>
+  {% endif %}
+</div>
+
+<div class="cl-layout">
+  <div class="cl-layout-main">
+    <div class="cl-box">
+
+      {% block search %}{% search_form cl %}{% endblock %}
+
+      {% if cl.has_filters %}{% else %}{% endif %}
+
+      {% if action_form and actions_on_top and cl.show_admin_actions %}
+      <div class="actions">
+        {% block action_form %}{% admin_actions %}{% endblock %}
+      </div>
+      {% endif %}
+
+      {% block date_hierarchy %}{% if cl.date_hierarchy %}{% date_hierarchy cl %}{% endif %}{% endblock %}
+
+      {% block result_list %}
+        {% if cl.result_count %}
+          {% result_list cl %}
+        {% else %}
+          <div class="cl-empty">
+            <div class="cl-empty-icon">📭</div>
+            <h3>{% trans 'No records yet' %}</h3>
+            <p>{% blocktrans with name=cl.opts.verbose_name_plural %}No {{ name }} found. {% endblocktrans %}
+              {% if has_add_permission %}
+              <a href="{% url cl.opts|admin_urlname:'add' %}" style="color:var(--accent);font-weight:600;">
+                {% blocktrans with name=cl.opts.verbose_name %}Add the first {{ name }} →{% endblocktrans %}
+              </a>
+              {% endif %}
+            </p>
+          </div>
+        {% endif %}
+      {% endblock %}
+
+      {% if action_form and actions_on_bottom and cl.show_admin_actions %}
+      <div class="actions" style="border-bottom:none;border-top:1px solid var(--border);">
+        {% admin_actions %}
+      </div>
+      {% endif %}
+
+      {% block pagination %}{% pagination cl %}{% endblock %}
+    </div>
+  </div>
+
+  {% if cl.has_filters %}
+  <div id="changelist-filter">
+    <h2>{% trans 'Filter' %}</h2>
+    {% block filters %}
+    {% for spec in cl.filter_specs %}{% admin_list_filter cl spec %}{% endfor %}
+    {% endblock %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,410 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% trans "Log in" %} | Bright Minds Poetry Admin</title>
+  <link rel="icon" href="{% static 'admin/images/logo.png' %}">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ===== LEFT PANEL ===== */
+    .left-panel {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .left-panel .bg-image {
+      position: absolute;
+      inset: 0;
+      background: url("{% static 'admin/images/poetry-bg.png' %}") center center / cover no-repeat;
+      filter: brightness(0.45);
+      z-index: 0;
+    }
+
+    .left-panel .overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(19, 26, 60, 0.72) 0%,
+        rgba(10, 10, 30, 0.55) 60%,
+        rgba(193, 18, 31, 0.18) 100%
+      );
+      z-index: 1;
+    }
+
+    .left-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 3rem 2.5rem;
+      color: #fff;
+      max-width: 480px;
+    }
+
+    .left-content .logo-wrap {
+      margin-bottom: 2rem;
+    }
+
+    .left-content .logo-wrap img {
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+      border: 2px solid rgba(255,255,255,0.12);
+    }
+
+    .left-content .welcome-tag {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #fca311;
+      margin-bottom: 0.6rem;
+    }
+
+    .left-content h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 3.5vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1.2rem;
+      color: #fff;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    .left-content h1 span {
+      color: #fca311;
+      font-style: italic;
+    }
+
+    .left-content .tagline {
+      font-size: 1rem;
+      font-weight: 300;
+      color: rgba(255,255,255,0.78);
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+
+    .left-content .divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #fca311, #c1121f);
+      border-radius: 2px;
+      margin: 0 auto 2rem;
+    }
+
+    .left-content .art-meets {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.06em;
+    }
+
+    /* ===== RIGHT PANEL ===== */
+    .right-panel {
+      width: 480px;
+      min-width: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      padding: 3rem 2.5rem;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .right-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, #22223b, #c1121f, #fca311);
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .form-header {
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    .form-header .admin-badge {
+      display: inline-block;
+      background: #f0f4ff;
+      color: #22223b;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.9rem;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+      border: 1px solid #dde3f5;
+    }
+
+    .form-header h2 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: #22223b;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-header p {
+      font-size: 0.88rem;
+      color: #888;
+    }
+
+    /* Error messages */
+    .errornote {
+      background: #fff5f5;
+      border: 1px solid #feb2b2;
+      color: #c53030;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .errornote::before {
+      content: '⚠';
+      font-size: 1rem;
+    }
+
+    /* Form fields */
+    .field-row {
+      margin-bottom: 1.2rem;
+    }
+
+    .field-row label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 0.45rem;
+      letter-spacing: 0.03em;
+    }
+
+    .field-row input[type="text"],
+    .field-row input[type="password"] {
+      width: 100%;
+      padding: 0.78rem 1rem;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fafafa;
+      color: #222;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      outline: none;
+    }
+
+    .field-row input[type="text"]:focus,
+    .field-row input[type="password"]:focus {
+      border-color: #c1121f;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(193, 18, 31, 0.1);
+    }
+
+    .field-row .errorlist {
+      list-style: none;
+      margin-top: 0.3rem;
+      font-size: 0.78rem;
+      color: #c53030;
+    }
+
+    /* Submit button */
+    .submit-btn {
+      width: 100%;
+      padding: 0.88rem;
+      background: linear-gradient(135deg, #c1121f 0%, #a0101b 100%);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-top: 0.5rem;
+      box-shadow: 0 4px 14px rgba(193, 18, 31, 0.35);
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(193, 18, 31, 0.45);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Footer links */
+    .form-footer {
+      margin-top: 1.8rem;
+      text-align: center;
+    }
+
+    .form-footer a {
+      font-size: 0.82rem;
+      color: #888;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .form-footer a:hover {
+      color: #c1121f;
+    }
+
+    .form-footer .copyright {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #bbb;
+    }
+
+    /* Responsive: stack on small screens */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        overflow: auto;
+        height: auto;
+        min-height: 100vh;
+      }
+      .left-panel {
+        min-height: 300px;
+        flex: none;
+      }
+      .right-panel {
+        width: 100%;
+        min-width: unset;
+        padding: 2.5rem 1.5rem;
+      }
+      .right-panel::before {
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #22223b, #c1121f, #fca311);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== LEFT PANEL ===== -->
+  <div class="left-panel">
+    <div class="bg-image"></div>
+    <div class="overlay"></div>
+    <div class="left-content">
+      <div class="logo-wrap">
+        <img src="{% static 'admin/images/logo.png' %}" alt="Bright Minds Poetry Logo">
+      </div>
+      <p class="welcome-tag">Welcome to</p>
+      <h1>Bright Minds<br><span>Poetry</span></h1>
+      <div class="divider"></div>
+      <p class="tagline">
+        Your creative hub for managing poems,<br>
+        authors, and inspiring literary content.
+      </p>
+      <p class="art-meets">Art meets Passion</p>
+    </div>
+  </div>
+
+  <!-- ===== RIGHT PANEL ===== -->
+  <div class="right-panel">
+    <div class="form-container">
+
+      <div class="form-header">
+        <span class="admin-badge">Admin Portal</span>
+        <h2>Sign in</h2>
+        <p>Enter your credentials to continue</p>
+      </div>
+
+      {% if form.errors %}
+        {% for error in form.non_field_errors %}
+          <div class="errornote">{{ error }}</div>
+        {% endfor %}
+        {% if not form.non_field_errors %}
+          <div class="errornote">{% trans "Please correct the errors below." %}</div>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="{{ app_path }}" id="login-form">
+        {% csrf_token %}
+
+        <div class="field-row">
+          {{ form.username.label_tag }}
+          {{ form.username }}
+          {% if form.username.errors %}
+            <ul class="errorlist">
+              {% for error in form.username.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <div class="field-row">
+          {{ form.password.label_tag }}
+          {{ form.password }}
+          {% if form.password.errors %}
+            <ul class="errorlist">
+              {% for error in form.password.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <button type="submit" class="submit-btn">{% trans "Log in" %}</button>
+      </form>
+
+      <div class="form-footer">
+        {% url 'admin_password_reset' as password_reset_url %}
+        {% if password_reset_url %}
+          <a href="{{ password_reset_url }}">{% trans "Forgot your password?" %}</a>
+        {% endif %}
+        <p class="copyright">© 2025 Bright Minds Poetry. All rights reserved.</p>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

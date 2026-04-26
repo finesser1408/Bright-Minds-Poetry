@@ -1,0 +1,331 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_urls admin_modify %}
+
+{% block title %}
+  {% if add %}{% blocktrans with name=opts.verbose_name %}Add {{ name }}{% endblocktrans %}
+  {% else %}{{ original|truncatewords:"18" }}{% endif %}
+  | Bright Minds Poetry Admin
+{% endblock %}
+
+{% block breadcrumbs %}
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+<a href="{% url 'admin:app_list' opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+{% if has_change_permission %}
+<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+{% else %}
+{{ opts.verbose_name_plural|capfirst }}
+{% endif %}
+<span style="margin:0 .35rem;opacity:.4;">›</span>
+{% if add %}{% blocktrans with name=opts.verbose_name %}Add {{ name }}{% endblocktrans %}
+{% else %}{{ original|truncatewords:"12" }}{% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Change-form page styles ── */
+  .cf-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem; margin-bottom: 1.8rem;
+  }
+  .cf-header h1 {
+    font-size: 1.35rem; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .cf-header .cf-badge {
+    font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    padding: .25rem .7rem; border-radius: 20px; margin-left: .3rem;
+  }
+  .cf-badge-add { background: rgba(34,197,94,.12); color: #16a34a; }
+  .cf-badge-change { background: rgba(59,130,246,.12); color: #2563eb; }
+
+  /* Fieldset cards */
+  fieldset.module {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 1.4rem; overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  fieldset.module h2 {
+    background: var(--text) !important; color: #fff !important;
+    padding: .75rem 1.3rem; font-size: .75rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    border-bottom: 2px solid var(--accent); margin: 0 !important;
+  }
+  fieldset.module.collapse h2 { cursor: pointer; }
+  fieldset.module.collapse h2:hover { background: #334155 !important; }
+  fieldset.module.collapsed { overflow: hidden; }
+
+  /* Form rows */
+  .form-row {
+    display: flex; flex-direction: column; gap: .35rem;
+    padding: 1rem 1.3rem; border-bottom: 1px solid var(--border);
+  }
+  .form-row:last-child { border-bottom: none; }
+
+  .form-row label, label {
+    font-size: .8rem; font-weight: 700; color: var(--text-muted);
+    display: inline-block; margin-bottom: .2rem;
+  }
+  .required label::after, label.required::after { content: ' *'; color: var(--accent); }
+
+  .form-row input[type="text"],
+  .form-row input[type="email"],
+  .form-row input[type="url"],
+  .form-row input[type="number"],
+  .form-row input[type="password"],
+  .form-row input[type="date"],
+  .form-row input[type="datetime-local"],
+  .form-row select,
+  .form-row textarea {
+    width: 100%; max-width: 640px;
+    padding: .65rem 1rem; font-size: .9rem; font-family: inherit;
+    border: 1.5px solid var(--border); border-radius: 9px;
+    background: var(--card-bg); color: var(--text);
+    outline: none; transition: border-color .2s, box-shadow .2s;
+    appearance: auto;
+  }
+  .form-row input:focus,
+  .form-row select:focus,
+  .form-row textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(193,18,31,.1);
+    background: var(--card-bg);
+  }
+  .form-row textarea { resize: vertical; min-height: 120px; }
+  .form-row select { cursor: pointer; }
+
+  /* Checkboxes */
+  .form-row input[type="checkbox"] {
+    width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; vertical-align: middle;
+  }
+  .checkbox-row { flex-direction: row; align-items: center; gap: .6rem; }
+  .checkbox-row label { margin-bottom: 0; }
+
+  /* Help text */
+  .help, p.help {
+    font-size: .77rem; color: var(--text-muted); margin-top: .3rem;
+  }
+
+  /* Errors */
+  .errorlist {
+    list-style: none; margin: .4rem 0 0; padding: 0;
+  }
+  .errorlist li {
+    font-size: .8rem; color: #dc2626; padding: .3rem .6rem;
+    background: rgba(239,68,68,.08); border-radius: 6px; margin-bottom: .3rem;
+  }
+  .errornote {
+    background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+    border-radius: var(--radius); padding: .85rem 1.2rem;
+    font-size: .85rem; margin-bottom: 1.4rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .errornote::before { content: '⚠️'; font-size: 1rem; }
+
+  /* File inputs */
+  .form-row input[type="file"] {
+    font-size: .85rem; font-family: inherit;
+    padding: .5rem; border: 1.5px dashed var(--border); border-radius: 9px;
+    width: 100%; max-width: 640px; cursor: pointer; color: var(--text);
+  }
+  .form-row input[type="file"]:hover { border-color: var(--accent); }
+
+  /* Raw ID / related widget */
+  .related-widget-wrapper { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; max-width: 640px; }
+  .related-widget-wrapper select { flex: 1; max-width: 100%; }
+  .related-widget-wrapper a { color: var(--accent); font-size: .85rem; text-decoration: none; font-weight: 600; }
+
+  /* Submit row */
+  .submit-row {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.4rem;
+    display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+    margin-top: 0; box-shadow: var(--shadow-sm); margin-bottom: 1.5rem;
+  }
+  .submit-row input[type="submit"] {
+    padding: .6rem 1.4rem; border: none; border-radius: 8px;
+    font-size: .875rem; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: all .18s; line-height: 1;
+  }
+  .submit-row input[name="_save"] { background: var(--accent); color: #fff; }
+  .submit-row input[name="_save"]:hover { background: var(--accent-dark); }
+  .submit-row input[name="_addanother"] { background: var(--text); color: #fff; }
+  .submit-row input[name="_addanother"]:hover { background: #334155; }
+  .submit-row input[name="_continue"] { background: #475569; color: #fff; }
+  .submit-row input[name="_continue"]:hover { background: #334155; }
+  .submit-row a.deletelink {
+    margin-left: auto; padding: .6rem 1.2rem; border-radius: 8px;
+    background: rgba(239,68,68,.1); color: #dc2626; text-decoration: none;
+    font-size: .875rem; font-weight: 700; transition: all .18s;
+    border: 1px solid rgba(239,68,68,.2);
+  }
+  .submit-row a.deletelink:hover { background: #fef2f2; }
+
+  /* Inline groups */
+  .inline-group {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 1.4rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .inline-group h2 {
+    background: var(--text) !important; color: #fff !important;
+    padding: .75rem 1.3rem; font-size: .75rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    border-bottom: 2px solid var(--accent); margin: 0 !important;
+  }
+  .inline-related { border-bottom: 1px solid var(--border); }
+  .inline-related:last-child { border-bottom: none; }
+  .inline-related h3 {
+    background: var(--bg); padding: .6rem 1.3rem; font-size: .8rem;
+    font-weight: 700; border-bottom: 1px solid var(--border); margin: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .inline-related h3 .inline_label { color: var(--text-muted); }
+  .add-row { background: var(--bg); }
+  .add-row td { padding: .65rem 1.3rem; }
+  .add-row a { color: var(--accent); text-decoration: none; font-size: .85rem; font-weight: 600; }
+  .add-row a:hover { text-decoration: underline; }
+  .delete-row input[type="checkbox"] { accent-color: #ef4444; }
+
+  /* History link */
+  .object-history { font-size: .8rem; color: var(--text-muted); }
+  .object-history a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+  /* Collapse toggle */
+  .collapse-toggle {
+    font-size: .75rem; color: var(--gold); font-weight: 600;
+    text-decoration: none; margin-left: auto;
+  }
+</style>
+
+<div class="cf-header">
+  <h1>
+    {% if add %}
+      {% if opts.verbose_name == 'poem' %}📝
+      {% elif opts.verbose_name == 'gallery item' %}🖼️
+      {% elif opts.verbose_name == 'message' %}✉️
+      {% elif 'user' in opts.verbose_name %}👤
+      {% elif 'comment' in opts.verbose_name %}💬
+      {% elif 'like' in opts.verbose_name %}❤️
+      {% else %}📂{% endif %}
+      {% blocktrans with name=opts.verbose_name %}Add {{ name }}{% endblocktrans %}
+      <span class="cf-badge cf-badge-add">New</span>
+    {% else %}
+      {% if opts.verbose_name == 'poem' %}📝
+      {% elif opts.verbose_name == 'gallery item' %}🖼️
+      {% elif opts.verbose_name == 'message' %}✉️
+      {% elif 'user' in opts.verbose_name %}👤
+      {% elif 'comment' in opts.verbose_name %}💬
+      {% elif 'like' in opts.verbose_name %}❤️
+      {% else %}📂{% endif %}
+      {{ original|default:"Edit" }}
+      <span class="cf-badge cf-badge-change">Editing</span>
+    {% endif %}
+  </h1>
+  {% if not add and has_delete_permission %}
+  <a href="{% url opts|admin_urlname:'delete' original.pk|admin_urlquote %}" class="cl-add-btn"
+     style="background:#fef2f2;color:#dc2626;border:1px solid rgba(239,68,68,.2);">
+    🗑 {% trans 'Delete' %}
+  </a>
+  {% endif %}
+</div>
+
+{% if adminform.form.non_field_errors %}
+<div class="errornote">{{ adminform.form.non_field_errors }}</div>
+{% endif %}
+
+<form {% if has_file_field %}enctype="multipart/form-data" {% endif %}
+      action="" method="post" id="{{ opts.module_name }}_form" novalidate>
+{% csrf_token %}
+{% block form_top %}{% endblock %}
+
+{% for fieldset in adminform %}
+<fieldset class="module{% if fieldset.classes %} {{ fieldset.classes }}{% endif %}">
+  {% if fieldset.name %}
+  <h2>
+    {{ fieldset.name }}
+    {% if 'collapse' in fieldset.classes|join:' ' %}
+    <a href="#" class="collapse-toggle">Toggle ▾</a>
+    {% endif %}
+  </h2>
+  {% endif %}
+  {% for line in fieldset %}
+  <div class="form-row{% if line.fields|length == 1 and line.fields.0.field.widget.input_type == 'checkbox' %} checkbox-row{% endif %}">
+    {% for field in line %}
+    <div class="{% if not line.fields|length == 1 %}field-{{ forloop.counter }}{% endif %}">
+      {% if field.is_readonly %}
+        <label>{{ field.field.label }}:</label>
+        <div class="readonly">{{ field.contents }}</div>
+      {% else %}
+        {% if field.field.label_tag %}{{ field.field.label_tag }}{% endif %}
+        {{ field.field }}
+        {% if field.field.help_text %}<p class="help">{{ field.field.help_text }}</p>{% endif %}
+        {% if field.field.errors %}{{ field.field.errors }}{% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</fieldset>
+{% endfor %}
+
+{% block after_field_sets %}{% endblock %}
+
+{% block inline_field_sets %}
+{% for inline_admin_form in inline_admin_formsets %}
+<div class="inline-group" id="{{ inline_admin_form.formset.prefix }}-group">
+  <h2>{{ inline_admin_form.opts.verbose_name_plural|capfirst }}</h2>
+  {% for form in inline_admin_form %}
+  <div class="inline-related">
+    {% if inline_admin_form.opts.show_change_link and form.original %}
+    <h3>
+      <span class="inline_label">{{ form.original }}</span>
+      <a href="{% url inline_admin_form.opts|admin_urlname:'change' form.original.pk|admin_urlquote %}" style="font-size:.75rem;color:var(--accent);">Edit →</a>
+    </h3>
+    {% endif %}
+    {% for fieldset in form %}
+    <fieldset style="border:none;margin:0;padding:0;box-shadow:none;">
+      {% for line in fieldset %}
+      <div class="form-row">
+        {% for field in line %}
+        <div>
+          {% if field.field.label_tag %}{{ field.field.label_tag }}{% endif %}
+          {{ field.field }}
+          {% if field.field.help_text %}<p class="help">{{ field.field.help_text }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </fieldset>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  {% if inline_admin_form.formset.can_add_related %}
+  <div class="add-row">
+    <td colspan="100">
+      <a href="#">+ {% blocktrans with name=inline_admin_form.opts.verbose_name %}Add another {{ name }}{% endblocktrans %}</a>
+    </td>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block after_related_objects %}{% endblock %}
+
+{% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+
+{% if show_save_as_new %}
+<input type="hidden" name="_saveasnew" value="">
+{% endif %}
+
+</form>
+
+{% if not add %}
+<p class="object-history">
+  {% trans 'History:' %} <a href="{% url opts|admin_urlname:'history' original.pk|admin_urlquote %}">{% trans 'View change history' %} →</a>
+</p>
+{% endif %}
+
+{% endblock %}
