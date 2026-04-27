@@ -1,7 +1,8 @@
 
 import { Link } from 'react-router-dom';
-import { Instagram, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { SiTiktok } from 'react-icons/si';
+import { FaInstagram } from 'react-icons/fa';
 
 const Footer = () => {
   return (
@@ -17,7 +18,7 @@ const Footer = () => {
             </p>
             <div className="flex space-x-4">
               <SocialIcon icon={<SiTiktok size={20} />} href="https://www.tiktok.com/@brightminds748" />
-              <SocialIcon icon={<Instagram size={20} />} href="https://instagram.com/bri.ghtmindspoetry" />
+              <SocialIcon icon={<FaInstagram size={20} />} href="https://instagram.com/bri.ghtmindspoetry" />
               <SocialIcon icon={<Mail size={20} />} href="mailto:brightmindspoetry1408@gmail.com" />
             </div>
           </div>
