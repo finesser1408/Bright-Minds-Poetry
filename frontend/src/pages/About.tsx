@@ -12,7 +12,7 @@ const About = () => {
       <NavBar />
       
       <Hero 
-        backgroundImage="/lovable-uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png"
+        backgroundImage="/uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png"
         title="About Our Journey"
         subtitle="Discover the story behind Bright Minds Poetry and our passion for the written word."
         buttonText="Join Our Community"

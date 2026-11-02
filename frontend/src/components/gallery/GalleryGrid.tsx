@@ -73,24 +73,28 @@ export const GalleryGrid = ({
       
       <div className="container mx-auto px-4 pt-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {items
-            .filter(item => {
-              if (activeTab === 'poem') return item.item_type === 'poem';
-              if (activeTab === 'publication') return item.item_type === 'publication';
-              return true; // For 'all' tab
-            })
-            .map((item) => (
-              <div key={item.id} className="cursor-pointer">
-                <GalleryItemComponent 
-                  image={item.media_file || ''}
-                  title={item.title}
-                  description={item.description || ''}
-                  type={item.item_type}
-                  mediaType={item.media_type}
-                  thumbnail={item.thumbnail}
-                />
-              </div>
-            ))}
+          {Array.isArray(items) && items.length > 0 ? (
+            items
+              .filter(item => {
+                if (activeTab === 'poem') return item.item_type === 'poem';
+                if (activeTab === 'publication') return item.item_type === 'publication';
+                return true; // For 'all' tab
+              })
+              .map((item) => (
+                <div key={item.id} className="cursor-pointer">
+                  <GalleryItemComponent 
+                    image={item.media_file || ''}
+                    title={item.title}
+                    description={item.description || ''}
+                    type={item.item_type}
+                    mediaType={item.media_type}
+                    thumbnail={item.thumbnail}
+                  />
+                </div>
+              ))
+          ) : (
+            <div className="col-span-3 text-center py-4 text-gray-500">No items found in the gallery.</div>
+          )}
         </div>
       </div>
     </div>

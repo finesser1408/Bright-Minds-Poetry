@@ -57,7 +57,7 @@ const Gallery = () => {
       <NavBar />
       
       <Hero 
-        backgroundImage="/lovable-uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png"
+        backgroundImage="/uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png"
         title="Poetry Gallery"
         subtitle="Explore our collection of visual poetry and publications."
         buttonText="Submit Your Work"

@@ -15,7 +15,7 @@ const Index = () => {
       <NavBar />
       <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading...</div>}>
         <Hero 
-          backgroundImage="/lovable-uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png"
+          backgroundImage="/uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png"
           title="Where Words Become Magic"
           subtitle="Discover the art of poetry with Bright Minds Poetry - where creativity knows no bounds."
           buttonText="Explore Our Work"
@@ -29,7 +29,7 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <div className="order-2 lg:order-1">
               <img 
-                src="/lovable-uploads/b4d94ec4-3ae5-42af-80c6-40b87e4d6472.png" 
+                src="/uploads/b4d94ec4-3ae5-42af-80c6-40b87e4d6472.png" 
                 alt="Bright Minds Poetry" 
                 className="rounded-lg shadow-xl animate-float w-full h-auto"
                 loading="lazy"
@@ -89,7 +89,7 @@ const Index = () => {
       <section 
         className="py-12 md:py-20 px-4 relative"
         style={{
-          backgroundImage: `url(/lovable-uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png)`,
+          backgroundImage: `url(/uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png)`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}

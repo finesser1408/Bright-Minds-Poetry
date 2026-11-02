@@ -1,14 +1,9 @@
-
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Moon, Sun, Monitor, Bell, Eye, Lock, User } from "lucide-react";
 
 interface CommunitySettingsProps {
   userData: {
@@ -18,7 +13,6 @@ interface CommunitySettingsProps {
 }
 
 export const CommunitySettings = ({ userData }: CommunitySettingsProps) => {
-  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState({
     newComments: true,
     newLikes: true,
@@ -36,232 +30,139 @@ export const CommunitySettings = ({ userData }: CommunitySettingsProps) => {
     location: "",
   });
 
-  const handleSaveProfile = () => {
+  const saveSettings = (category: string) => {
     toast({
-      title: "Profile Updated",
-      description: "Your profile settings have been saved successfully.",
+      title: "Changes Saved",
+      description: `${category} preferences have been updated.`,
     });
   };
-
-  const handleSaveNotifications = () => {
-    toast({
-      title: "Notification Settings Updated",
-      description: "Your notification preferences have been saved.",
-    });
-  };
-
-  const handleSavePrivacy = () => {
-    toast({
-      title: "Privacy Settings Updated",
-      description: "Your privacy settings have been saved.",
-    });
-  };
-
-  const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor;
 
   return (
-    <div className="space-y-6">
-      {/* Theme Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ThemeIcon size={20} className="text-crimson" />
-            <CardTitle>Appearance</CardTitle>
-          </div>
-          <CardDescription>
-            Customize the appearance of your community experience
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Label>Theme</Label>
-            <div className="flex gap-2">
-              <Button
-                variant={theme === 'light' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setTheme('light')}
-                className="flex items-center gap-2"
-              >
-                <Sun size={16} />
-                Light
-              </Button>
-              <Button
-                variant={theme === 'dark' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setTheme('dark')}
-                className="flex items-center gap-2"
-              >
-                <Moon size={16} />
-                Dark
-              </Button>
-              <Button
-                variant={theme === 'system' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setTheme('system')}
-                className="flex items-center gap-2"
-              >
-                <Monitor size={16} />
-                System
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="max-w-4xl mx-auto py-12">
+      <div className="mb-16 border-b border-zinc-100 pb-10">
+        <h2 className="text-4xl font-serif font-bold text-zinc-900 tracking-tight">Settings</h2>
+        <p className="text-zinc-500 mt-3 font-medium">Manage your identity, visibility, and interface preferences.</p>
+      </div>
 
-      {/* Profile Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <User size={20} className="text-crimson" />
-            <CardTitle>Profile Settings</CardTitle>
-          </div>
-          <CardDescription>
-            Manage your public profile information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
-            <Input
-              id="displayName"
-              value={profile.displayName}
-              onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Input
-              id="bio"
-              placeholder="Tell us about yourself..."
-              value={profile.bio}
-              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              placeholder="Your location (optional)"
-              value={profile.location}
-              onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-            />
-          </div>
-          <Button onClick={handleSaveProfile} className="bg-crimson hover:bg-crimson/90">
-            Save Profile
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="space-y-24">
 
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Bell size={20} className="text-crimson" />
-            <CardTitle>Notifications</CardTitle>
+        {/* Profile Section */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="space-y-2">
+            <h3 className="font-serif text-xl font-bold text-zinc-900">Identity</h3>
+            <p className="text-sm text-zinc-400 leading-relaxed">This information is shared across the community and on your public works.</p>
           </div>
-          <CardDescription>
-            Choose what notifications you want to receive
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>New Comments</Label>
-              <p className="text-sm text-muted-foreground">Get notified when someone comments on your poems</p>
+          <div className="md:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Public Display Name</Label>
+                <Input
+                  value={profile.displayName}
+                  onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+                  className="border-zinc-200 focus:border-zinc-900 focus:ring-0 rounded-none h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Bio</Label>
+                <Input
+                  placeholder="Writer, dreamer, observer..."
+                  value={profile.bio}
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                  className="border-zinc-200 focus:border-zinc-900 focus:ring-0 rounded-none h-12"
+                />
+              </div>
             </div>
-            <Switch
-              checked={notifications.newComments}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, newComments: checked })}
-            />
+            <Button
+              onClick={() => saveSettings("Profile")}
+              className="bg-zinc-900 text-white rounded-full px-8 hover:bg-zinc-800 transition-all uppercase tracking-widest text-[10px] font-bold"
+            >
+              Update Identity
+            </Button>
           </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>New Likes</Label>
-              <p className="text-sm text-muted-foreground">Get notified when someone likes your poems</p>
-            </div>
-            <Switch
-              checked={notifications.newLikes}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, newLikes: checked })}
-            />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Weekly Digest</Label>
-              <p className="text-sm text-muted-foreground">Receive a weekly summary of community activity</p>
-            </div>
-            <Switch
-              checked={notifications.weeklyDigest}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, weeklyDigest: checked })}
-            />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Community Updates</Label>
-              <p className="text-sm text-muted-foreground">Get updates about new features and events</p>
-            </div>
-            <Switch
-              checked={notifications.communityUpdates}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, communityUpdates: checked })}
-            />
-          </div>
-          <Button onClick={handleSaveNotifications} className="bg-crimson hover:bg-crimson/90">
-            Save Notifications
-          </Button>
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Privacy Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Lock size={20} className="text-crimson" />
-            <CardTitle>Privacy</CardTitle>
+
+        {/* Notifications Section */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-zinc-50 pt-20">
+          <div className="space-y-2">
+            <h3 className="font-serif text-xl font-bold text-zinc-900">Notifications</h3>
+            <p className="text-sm text-zinc-400 leading-relaxed">Choose which community events trigger an alert.</p>
           </div>
-          <CardDescription>
-            Control your privacy and visibility settings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Public Profile</Label>
-              <p className="text-sm text-muted-foreground">Make your profile visible to other community members</p>
+          <div className="md:col-span-2 space-y-6">
+            {[
+              { id: 'newComments', label: 'New Comments', desc: 'Alerts when someone interacts with your verses.' },
+              { id: 'newLikes', label: 'Appreciation', desc: 'When your work is marked as a favorite.' },
+              { id: 'weeklyDigest', label: 'The Weekly Review', desc: 'A curated summary of the week’s best works.' },
+            ].map((n) => (
+              <div key={n.id} className="flex items-center justify-between py-2">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold text-zinc-900">{n.label}</Label>
+                  <p className="text-xs text-zinc-400">{n.desc}</p>
+                </div>
+                <Switch
+                  checked={(notifications as any)[n.id]}
+                  onCheckedChange={(checked) => setNotifications({ ...notifications, [n.id]: checked })}
+                  className="data-[state=checked]:bg-zinc-900"
+                />
+              </div>
+            ))}
+            <div className="pt-4">
+              <Button
+                variant="outline"
+                onClick={() => saveSettings("Notification")}
+                className="rounded-full border-zinc-200 px-8 uppercase tracking-widest text-[10px] font-bold"
+              >
+                Save Preferences
+              </Button>
             </div>
-            <Switch
-              checked={privacy.profileVisible}
-              onCheckedChange={(checked) => setPrivacy({ ...privacy, profileVisible: checked })}
-            />
           </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Show Email</Label>
-              <p className="text-sm text-muted-foreground">Display your email address on your profile</p>
+        </section>
+
+        {/* Privacy Section */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-zinc-50 pt-20">
+          <div className="space-y-2">
+            <h3 className="font-serif text-xl font-bold text-zinc-900">Privacy</h3>
+            <p className="text-sm text-zinc-400 leading-relaxed">Manage your presence and visibility in the gallery.</p>
+          </div>
+          <div className="md:col-span-2 space-y-6">
+            {[
+              { id: 'profileVisible', label: 'Public Curator Profile', desc: 'Allow others to find your collection.' },
+              { id: 'showEmail', label: 'Display Email', desc: 'Make your email address visible for inquiries.' },
+              { id: 'showPoems', label: 'Archive Visibility', desc: 'List your published poems in the public stream.' },
+            ].map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold text-zinc-900">{p.label}</Label>
+                  <p className="text-xs text-zinc-400">{p.desc}</p>
+                </div>
+                <Switch
+                  checked={(privacy as any)[p.id]}
+                  onCheckedChange={(checked) => setPrivacy({ ...privacy, [p.id]: checked })}
+                  className="data-[state=checked]:bg-zinc-900"
+                />
+              </div>
+            ))}
+            <div className="pt-4">
+              <Button
+                variant="outline"
+                onClick={() => saveSettings("Privacy")}
+                className="rounded-full border-zinc-200 px-8 uppercase tracking-widest text-[10px] font-bold"
+              >
+                Save Privacy Settings
+              </Button>
             </div>
-            <Switch
-              checked={privacy.showEmail}
-              onCheckedChange={(checked) => setPrivacy({ ...privacy, showEmail: checked })}
-            />
           </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Show Poems</Label>
-              <p className="text-sm text-muted-foreground">Allow others to see your published poems</p>
-            </div>
-            <Switch
-              checked={privacy.showPoems}
-              onCheckedChange={(checked) => setPrivacy({ ...privacy, showPoems: checked })}
-            />
-          </div>
-          <Button onClick={handleSavePrivacy} className="bg-crimson hover:bg-crimson/90">
-            Save Privacy Settings
-          </Button>
-        </CardContent>
-      </Card>
+        </section>
+
+      </div>
+
+      {/* Danger Zone */}
+      <footer className="mt-32 pt-12 border-t border-zinc-100">
+        <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-300">Account Control</p>
+        <button className="mt-4 text-xs font-bold text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">
+          Permanently deactivate account
+        </button>
+      </footer>
     </div>
   );
 };

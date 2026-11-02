@@ -13,7 +13,7 @@ const Services = () => {
       <NavBar />
       
       <Hero 
-        backgroundImage="/lovable-uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png"
+        backgroundImage="/uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png"
         title="Our Poetry Community"
         subtitle="Connect, share, and grow with poets from around the world in our vibrant literary community."
         buttonText="Join Our Community"
@@ -50,7 +50,7 @@ const Services = () => {
             
             <div className="rounded-lg overflow-hidden shadow-xl border-2 border-crimson order-1 lg:order-2">
               <img 
-                src="/lovable-uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png" 
+                src="/uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png" 
                 alt="Poetry Community" 
                 className="w-full h-48 md:h-64 lg:h-full object-cover"
               />
@@ -112,7 +112,7 @@ const Services = () => {
       <section 
         className="py-12 md:py-20 px-4 relative"
         style={{
-          backgroundImage: `url(/lovable-uploads/b4d94ec4-3ae5-42af-80c6-40b87e4d6472.png)`,
+          backgroundImage: `url(/uploads/b4d94ec4-3ae5-42af-80c6-40b87e4d6472.png)`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { getUser } from "@/lib/api";
 
 interface LoginFormProps {
   onAuthenticated: (userData: { name: string; email: string }) => void;
@@ -42,14 +44,14 @@ export const LoginForm = ({ onAuthenticated, onSwitchToRegister }: LoginFormProp
     // Real authentication
     import("@/lib/api").then(({ login }) => {
       login(formData.identifier, formData.password)
-        .then(response => {
+        .then(async () => {
           setIsLoading(false);
-          localStorage.setItem("accessToken", response.data.access || response.data.key);
+          const { data: user } = await getUser();
           toast({
             title: "Welcome back!",
             description: "You've been successfully logged in.",
           });
-          onAuthenticated({ name: formData.identifier, email: formData.identifier });
+          onAuthenticated({ name: user.username, email: user.email });
         })
         .catch(() => {
           setIsLoading(false);
@@ -103,7 +105,8 @@ export const LoginForm = ({ onAuthenticated, onSwitchToRegister }: LoginFormProp
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col">
+      <CardFooter className="flex flex-col gap-3">
+        <Link className="text-sm text-crimson underline" to="/forgot-password">Forgot your password?</Link>
         <p className="text-sm text-muted-foreground">
           Don't have an account?
           <Button 

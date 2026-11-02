@@ -11,7 +11,7 @@ const Contact = () => {
       <NavBar />
       
       <Hero 
-        backgroundImage="/lovable-uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png"
+        backgroundImage="/uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png"
         title="Get In Touch"
         subtitle="Have questions or ready to begin your poetic journey? We're here to help."
         buttonText="Contact Now"
@@ -63,6 +63,9 @@ const Contact = () => {
                     title="Email"
                     details={["brightmindspoetry1408@gmail.com"]}
                   />
+                  <a href="https://wa.me/263715503026" target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-full bg-[#25D366] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1fb85a]">
+                    Chat with us on WhatsApp
+                  </a>
                 </div>
               </div>
               
@@ -134,8 +137,7 @@ const ContactInfo = ({ icon, title, details }: ContactInfoProps) => {
       <div>
         <h3 className="font-semibold text-base md:text-lg mb-1 md:mb-2">{title}</h3>
         <ul className="space-y-1 text-gray-600 text-sm md:text-base">
-          {details.map((detail, index) => (
-            <li key={index}>{detail}</li>
+          {details.map((detail, index) => (                    <li key={index}>{detail.includes('@') ? <a className="underline hover:text-crimson" href={`mailto:${detail}`}>{detail}</a> : <a className="underline hover:text-crimson" href={`tel:${detail.replace(/[^+\\d]/g, '')}`}>{detail}</a>}</li>
           ))}
         </ul>
       </div>

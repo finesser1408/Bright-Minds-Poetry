@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/lib/api';
 
 const ContactForm = () => {
   const { toast } = useToast();
@@ -26,24 +27,17 @@ const ContactForm = () => {
     e.preventDefault();
     try {
       const { name, email, subject, message } = formData;
-      const res = await fetch('http://localhost:8000/api/messages/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, subject, content: message })
-      });
-      if (!res.ok) throw new Error('Failed to send message');
+      await apiClient.post('/messages/', { name, email, subject, content: message });
       toast({
         title: "Message Sent!",
-        description: "We'll get back to you soon.",
+        description: "Your message has been emailed to our team. We'll get back to you soon.",
         variant: "default",
       });
       setFormData({ name: '', email: '', subject: '', message: '' });
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: "There was a problem sending your message. Please try again later.",
+        description: err.response?.data?.detail || "There was a problem sending your message. Please try again later.",
         variant: "destructive",
       });
     }

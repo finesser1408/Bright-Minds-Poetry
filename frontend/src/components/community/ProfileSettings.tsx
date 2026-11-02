@@ -1,22 +1,25 @@
-
-import React, { useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useRef, useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Camera, User, Mail, MapPin, Calendar, Edit3 } from "lucide-react";
+import { Camera, Mail, MapPin, Globe, Feather, Info } from "lucide-react";
+import { apiClient, currentCsrfToken, getCsrfToken } from "@/lib/api";
 
 interface ProfileSettingsProps {
   userData: {
     name: string;
     email: string;
   };
+  stats?: {
+    poemsCount: number;
+    likesCount: number;
+  };
 }
 
-export const ProfileSettings = ({ userData }: ProfileSettingsProps) => {
+export const ProfileSettings = ({ userData, stats }: ProfileSettingsProps) => {
   const [profile, setProfile] = useState({
     displayName: userData.name,
     bio: "",
@@ -24,11 +27,6 @@ export const ProfileSettings = ({ userData }: ProfileSettingsProps) => {
     favoriteGenre: "",
     writingSince: "",
     website: "",
-    socialLinks: {
-      twitter: "",
-      instagram: "",
-      linkedin: "",
-    }
   });
 
   const [avatarUrl, setAvatarUrl] = useState<string>("");
@@ -36,319 +34,234 @@ export const ProfileSettings = ({ userData }: ProfileSettingsProps) => {
   const [profileId, setProfileId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch profile on mount
-  React.useEffect(() => {
-    fetch('/api/profiles/', {
-      credentials: 'include',
-    })
-      .then(res => res.json())
-      .then(data => {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await apiClient.get('/profiles/');
+        const data = res.data;
         if (data && data.length > 0) {
-          setProfileId(data[0].id);
-          setAvatarUrl(data[0].avatar || "");
+          const p = data[0];
+          setProfileId(p.id);
+          setAvatarUrl(p.avatar || "");
           setProfile({
-            displayName: data[0].username || userData.name,
-            bio: data[0].bio || "",
-            location: data[0].location || "",
-            favoriteGenre: data[0].favorite_genre || "",
-            writingSince: data[0].writing_since || "",
-            website: data[0].website || "",
-            socialLinks: {
-              twitter: data[0].twitter || "",
-              instagram: data[0].instagram || "",
-              linkedin: data[0].linkedin || "",
-            }
+            displayName: p.username || userData.name,
+            bio: p.bio || "",
+            location: p.location || "",
+            favoriteGenre: p.favorite_genre || "",
+            writingSince: p.writing_since || "",
+            website: p.website || "",
+          });
+        } else {
+          console.log("No profile returned from API even after fetch");
+        }
+      } catch (err: any) {
+        console.error("Profile fetch failed:", err.response?.data || err.message);
+        if (err.response?.status === 401) {
+          toast({ 
+            title: "Session Expired", 
+            description: "Please sign out and sign in again to edit your profile.",
+            variant: "destructive"
           });
         }
-      });
-  }, []);
+      }
+    };
+    fetchProfile();
+  }, [userData.name]);
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !profileId) return;
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please select an image file.",
-        variant: "destructive",
-      });
+    if (!file || !profileId) {
+      if (!profileId) toast({ title: "Error", description: "Profile ID missing. Please refresh.", variant: "destructive" });
       return;
     }
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please select an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-    // Upload avatar to backend
+
     const formData = new FormData();
     formData.append('avatar', file);
     try {
-      const res = await fetch(`/api/profiles/${profileId}/`, {
-        method: 'PATCH',
-        credentials: 'include',
-        body: formData,
+      const csrfToken = currentCsrfToken() || await getCsrfToken();
+      const res = await apiClient.patch(`/profiles/${profileId}/`, formData, {
+        headers: { 'X-CSRFToken': csrfToken }
       });
-      if (!res.ok) throw new Error('Failed to upload avatar');
-      const updated = await res.json();
-      setAvatarUrl(updated.avatar || "");
-      toast({
-        title: "Avatar uploaded",
-        description: "Your profile picture has been updated.",
-      });
-    } catch (err) {
-      toast({
-        title: "Upload failed",
-        description: "Could not upload avatar. Try again later.",
-        variant: "destructive",
-      });
+      setAvatarUrl(res.data.avatar || "");
+      toast({ title: "Avatar updated" });
+    } catch (err: any) {
+      console.error("Avatar upload failed:", err.response?.data || err.message);
+      toast({ title: "Upload failed", description: err.response?.data?.avatar?.[0] || "Could not upload image.", variant: "destructive" });
     }
   };
 
   const handleSaveProfile = async () => {
-    if (!profileId) return;
+    if (!profileId) {
+      toast({ title: "Profile Error", description: "Could not find your profile ID. Please refresh.", variant: "destructive" });
+      return;
+    }
     try {
-      const payload = {
+      const csrfToken = currentCsrfToken() || await getCsrfToken();
+      const response = await apiClient.patch(`/profiles/${profileId}/`, {
         bio: profile.bio,
         location: profile.location,
         favorite_genre: profile.favoriteGenre,
         writing_since: profile.writingSince,
         website: profile.website,
-        twitter: profile.socialLinks.twitter,
-        instagram: profile.socialLinks.instagram,
-        linkedin: profile.socialLinks.linkedin,
-      };
-      const res = await fetch(`/api/profiles/${profileId}/`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to update profile');
+      }, { headers: { 'X-CSRFToken': csrfToken } });
       setIsEditing(false);
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been saved successfully.",
-      });
-    } catch {
-      toast({
-        title: "Update failed",
-        description: "Could not update profile. Try again later.",
-        variant: "destructive",
+      toast({ title: "Profile saved successfully" });
+    } catch (error: any) {
+      console.error("Save failed details:", error.response?.data || error.message);
+      toast({ 
+        title: "Save failed", 
+        description: error.response?.data?.detail || "Could not save changes at this time.",
+        variant: "destructive" 
       });
     }
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setProfile({
-      displayName: userData.name,
-      bio: "",
-      location: "",
-      favoriteGenre: "",
-      writingSince: "",
-      website: "",
-      socialLinks: {
-        twitter: "",
-        instagram: "",
-        linkedin: "",
-      }
-    });
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Profile Header */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row items-start gap-6">
-            <div className="relative">
-              <Avatar className="w-24 h-24">
-                {avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt={profile.displayName} />
-                ) : (
-                  <AvatarFallback className="text-2xl bg-gradient-to-r from-crimson to-pink-500 text-white">
-                    {userData.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <Button
-                size="icon"
-                variant="outline"
-                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Camera size={16} />
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                className="hidden"
-              />
-            </div>
-            
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-playfair font-bold">{profile.displayName}</h2>
-                <Button
-                  variant={isEditing ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="flex items-center gap-2"
-                >
-                  <Edit3 size={16} />
-                  {isEditing ? "Cancel" : "Edit Profile"}
-                </Button>
-              </div>
-              
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail size={16} />
-                <span>{userData.email}</span>
-              </div>
-              
-              {profile.location && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin size={16} />
-                  <span>{profile.location}</span>
-                </div>
-              )}
-              
-              {profile.bio && (
-                <p className="text-sm text-muted-foreground mt-3">{profile.bio}</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="max-w-4xl mx-auto py-12 space-y-24">
 
-      {/* Profile Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User size={20} className="text-crimson" />
-            Profile Information
-          </CardTitle>
-          <CardDescription>
-            Update your personal information and writing preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Editorial Header */}
+      <header className="relative flex flex-col md:flex-row items-center md:items-end gap-10 border-b border-zinc-100 pb-16">
+        <div className="relative group">
+          <Avatar className="w-40 h-40 border-[6px] border-white shadow-2xl">
+            {avatarUrl ? (
+              <AvatarImage 
+                src={avatarUrl.startsWith('http') ? avatarUrl : `${import.meta.env.VITE_API_URL ? new URL(import.meta.env.VITE_API_URL).origin : window.location.origin}${avatarUrl}`} 
+                className="object-cover" 
+              />
+            ) : (
+              <AvatarFallback className="text-4xl bg-zinc-900 text-white font-serif">
+                {userData.name.charAt(0)}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full"
+          >
+            <Camera size={24} />
+          </button>
+          <input ref={fileInputRef} type="file" onChange={handleAvatarUpload} className="hidden" />
+        </div>
+
+        <div className="flex-1 space-y-4 text-center md:text-left">
+          <div>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-zinc-400">Contributor</span>
+            <h1 className="text-5xl font-serif font-bold text-zinc-900 tracking-tight mt-1">
+              {profile.displayName}
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm text-zinc-500 font-medium">
+            <span className="flex items-center gap-2"><Mail size={14} /> {userData.email}</span>
+            {profile.location && <span className="flex items-center gap-2"><MapPin size={14} /> {profile.location}</span>}
+            {profile.website && <span className="flex items-center gap-2"><Globe size={14} /> {profile.website}</span>}
+          </div>
+        </div>
+
+        <Button
+          onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
+          className={`rounded-full px-8 uppercase tracking-widest text-[10px] font-bold transition-all ${isEditing ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200" : "bg-zinc-900 text-white"
+            }`}
+        >
+          {isEditing ? "Save Biography" : "Edit Profile"}
+        </Button>
+      </header>
+
+      {/* Main Form Area */}
+      <main className="grid grid-cols-1 md:grid-cols-3 gap-16">
+        <aside className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="font-serif text-xl font-bold">The Narrative</h3>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Define your presence in the gallery. This information helps others understand your perspective and style.
+            </p>
+          </div>
+
+          {/* Internal Stats - No Cards, just clean numbers */}
+          <div className="pt-10 space-y-8 border-t border-zinc-50">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1">Publications</p>
+              <p className="text-3xl font-serif font-bold">{stats?.poemsCount || 0} <span className="text-sm font-sans font-normal text-zinc-300">Works</span></p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1">Appreciation</p>
+              <p className="text-3xl font-serif font-bold">{stats?.likesCount || 0} <span className="text-sm font-sans font-normal text-zinc-300">Likes</span></p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="md:col-span-2 space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Public Name</Label>
               <Input
-                id="displayName"
                 value={profile.displayName}
+                disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                disabled={!isEditing}
+                className="border-0 border-b border-zinc-100 rounded-none focus-visible:ring-0 focus-visible:border-zinc-900 px-0 text-lg font-serif"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Home Base</Label>
               <Input
-                id="location"
-                placeholder="Your city, country"
                 value={profile.location}
+                disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                disabled={!isEditing}
+                className="border-0 border-b border-zinc-100 rounded-none focus-visible:ring-0 focus-visible:border-zinc-900 px-0 text-lg font-serif"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="favoriteGenre">Favorite Poetry Genre</Label>
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Preferred Genre</Label>
               <Input
-                id="favoriteGenre"
-                placeholder="e.g., Contemporary, Romantic, Free Verse"
                 value={profile.favoriteGenre}
+                disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, favoriteGenre: e.target.value })}
-                disabled={!isEditing}
+                className="border-0 border-b border-zinc-100 rounded-none focus-visible:ring-0 focus-visible:border-zinc-900 px-0 text-lg font-serif"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="writingSince">Writing Since</Label>
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">Member Since</Label>
               <Input
-                id="writingSince"
-                placeholder="e.g., 2020"
                 value={profile.writingSince}
-                onChange={(e) => setProfile({ ...profile, writingSince: e.target.value })}
                 disabled={!isEditing}
+                onChange={(e) => setProfile({ ...profile, writingSince: e.target.value })}
+                className="border-0 border-b border-zinc-100 rounded-none focus-visible:ring-0 focus-visible:border-zinc-900 px-0 text-lg font-serif"
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
+            <Label className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">The Curator's Statement (Bio)</Label>
             <Textarea
-              id="bio"
-              placeholder="Tell the community about yourself and your writing journey..."
               value={profile.bio}
+              disabled={!isEditing}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-              disabled={!isEditing}
-              className="min-h-[100px]"
+              className="min-h-[150px] border-zinc-100 focus-visible:ring-0 focus-visible:border-zinc-900 rounded-2xl p-6 italic font-serif text-lg leading-relaxed bg-zinc-50/50"
+              placeholder="Describe your writing journey..."
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              placeholder="https://yourwebsite.com"
-              value={profile.website}
-              onChange={(e) => setProfile({ ...profile, website: e.target.value })}
-              disabled={!isEditing}
-            />
-          </div>
-          
+
           {isEditing && (
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveProfile} className="bg-crimson hover:bg-crimson/90">
+            <div className="flex gap-4 pt-6">
+              <Button onClick={handleSaveProfile} className="bg-zinc-900 text-white rounded-full px-10 font-bold text-[10px] uppercase tracking-widest">
                 Save Changes
               </Button>
-              <Button variant="outline" onClick={handleCancel}>
-                Cancel
+              <Button variant="ghost" onClick={() => setIsEditing(false)} className="text-[10px] uppercase tracking-widest font-bold">
+                Discard
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </main>
 
-      {/* Writing Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar size={20} className="text-crimson" />
-            Writing Statistics
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="text-2xl font-bold text-crimson">3</div>
-              <div className="text-sm text-muted-foreground">Poems Published</div>
-            </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="text-2xl font-bold text-crimson">12</div>
-              <div className="text-sm text-muted-foreground">Total Likes</div>
-            </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="text-2xl font-bold text-crimson">5</div>
-              <div className="text-sm text-muted-foreground">Comments Received</div>
-            </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <div className="text-2xl font-bold text-crimson">7</div>
-              <div className="text-sm text-muted-foreground">Days Active</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Subtle Footer Stats */}
+      <footer className="pt-12 border-t border-zinc-100 flex justify-between items-center opacity-40 grayscale">
+        <div className="flex gap-10">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tighter"><Feather size={12} /> Active Contributor</div>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tighter"><Info size={12} /> Verification: Verified</div>
+        </div>
+        <div className="text-[10px] font-mono italic">ID: PRF_{profileId || '000'}</div>
+      </footer>
     </div>
   );
 };

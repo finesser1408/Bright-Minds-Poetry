@@ -72,17 +72,11 @@ const GalleryItemComponent = ({
     // For relative paths, ensure they start with a slash
     const cleanUrl = url.startsWith('/') ? url : `/${url}`;
     
-    // Use environment variable for the base URL if available, otherwise default to localhost:8000
-    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-    
-    // For documents, ensure we're using the correct endpoint
+    const apiBase = import.meta.env.VITE_API_URL || '';
+    const apiOrigin = apiBase ? new URL(apiBase).origin : window.location.origin;
     const isDocument = url.includes('gallery_media/') || url.includes('poem_media/');
-    if (isDocument) {
-      // Ensure the URL points to the media endpoint
-      return `${baseUrl}/media${cleanUrl}`;
-    }
-    
-    return `${baseUrl}${cleanUrl}`;
+    const mediaPath = isDocument && !cleanUrl.startsWith('/media/') ? `/media${cleanUrl}` : cleanUrl;
+    return `${apiOrigin}${mediaPath}`;
   };
 
   const downloadFile = async (url: string) => {
@@ -230,7 +224,15 @@ const GalleryItemComponent = ({
     }
     
     const imgSrc = isDocument && hasThumbnail ? getFullUrl(thumbnail) : currentImage;
-    
+
+    if (!imgSrc) {
+      return (
+        <div className="flex flex-col items-center justify-center p-6 text-center w-full h-full text-sm text-gray-400">
+          {imageExists === false ? 'No image available' : 'Loading...'}
+        </div>
+      );
+    }
+
     return (
       <img
         src={imgSrc}

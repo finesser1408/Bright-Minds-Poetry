@@ -13,13 +13,13 @@ export const CommunityAuth = ({ onAuthenticated }: CommunityAuthProps) => {
   return (
     <>
       {isLogin ? (
-        <LoginForm 
-          onAuthenticated={onAuthenticated} 
+        <LoginForm
+          onAuthenticated={onAuthenticated}
           onSwitchToRegister={() => setIsLogin(false)}
         />
       ) : (
-        <RegisterForm 
-          onAuthenticated={onAuthenticated} 
+        <RegisterForm
+          onAuthenticated={onAuthenticated}
           onSwitchToLogin={() => setIsLogin(true)}
         />
       )}

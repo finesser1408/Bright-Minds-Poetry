@@ -4,15 +4,6 @@ import { Link } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-function isAuthenticated() {
-  return Boolean(localStorage.getItem('accessToken'));
-}
-
-function handleLogout() {
-  localStorage.removeItem('accessToken');
-  window.location.href = '/';
-}
-
 const NavBar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);

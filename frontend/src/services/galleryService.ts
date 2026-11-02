@@ -1,6 +1,6 @@
-import axios from 'axios';
+import { apiClient } from '@/lib/api';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = '/gallery/';
 
 export interface GalleryItem {
   id: number;
@@ -32,7 +32,7 @@ export interface GalleryItem {
 export const fetchGalleryItems = async (type?: 'publication' | 'poem'): Promise<GalleryItem[]> => {
   try {
     const params = type ? { type } : {};
-    const response = await axios.get<GalleryItem[]>(`${API_URL}/gallery/`, { params });
+    const response = await apiClient.get<GalleryItem[]>(API_URL, { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching gallery items:', error);
@@ -42,7 +42,7 @@ export const fetchGalleryItems = async (type?: 'publication' | 'poem'): Promise<
 
 export const fetchGalleryItem = async (id: number): Promise<GalleryItem> => {
   try {
-    const response = await axios.get<GalleryItem>(`${API_URL}/gallery/${id}/`);
+    const response = await apiClient.get<GalleryItem>(`${API_URL}${id}/`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching gallery item ${id}:`, error);

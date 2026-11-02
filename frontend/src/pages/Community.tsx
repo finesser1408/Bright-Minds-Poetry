@@ -1,7 +1,8 @@
-import { useState, Suspense, lazy } from "react";
+import { useState, Suspense, lazy, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { CommunityAuth } from "@/components/community/CommunityAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { getUser, logout as logoutRequest } from "@/lib/api";
 
 const CommunityDashboard = lazy(() => import('@/components/community/CommunityDashboard').then(m => ({ default: m.CommunityDashboard })));
 const CommunityMemberView = lazy(() => import('@/components/community/CommunityMemberView').then(m => ({ default: m.CommunityMemberView })));
@@ -12,14 +13,38 @@ const Hero = lazy(() => import('@/components/Hero'));
 
 const Community = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [userData, setUserData] = useState<{ name: string; email: string } | null>(null);
 
-  const handleAuthenticated = (data: { name: string; email: string }) => {
-    setUserData(data);
-    setIsAuthenticated(true);
+  useEffect(() => {
+    getUser().then(({ data }) => {
+      setUserData({ name: data.username, email: data.email });
+      setIsAuthenticated(true);
+    }).catch(() => {
+      setUserData(null);
+      setIsAuthenticated(false);
+    }).finally(() => setIsCheckingSession(false));
+  }, []);
+
+  const handleAuthenticated = async () => {
+    try {
+      const { data } = await getUser();
+      setUserData({ name: data.username, email: data.email });
+      setIsAuthenticated(true);
+    } catch {
+      setUserData(null);
+      setIsAuthenticated(false);
+      toast({ title: "Session could not be started", description: "Please sign in again.", variant: "destructive" });
+    }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      toast({ title: "Sign out failed", description: "Please retry or close your browser to end this session.", variant: "destructive" });
+      return;
+    }
     setIsAuthenticated(false);
     setUserData(null);
     toast({
@@ -32,27 +57,31 @@ const Community = () => {
     <ThemeProvider>
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
         {/* Only show NavBar when user is not authenticated */}
-        {!isAuthenticated && (
+        {!isCheckingSession && !isAuthenticated && (
           <Suspense fallback={<div className="h-32 flex items-center justify-center">Loading nav bar...</div>}>
             <NavBar />
           </Suspense>
         )}
         
+        {isCheckingSession ? (
+          <div className="min-h-screen flex items-center justify-center" role="status">Checking your session...</div>
+        ) : null}
+
         {/* Hero Section */}
-        {!isAuthenticated ? (
+        {!isCheckingSession && !isAuthenticated ? (
           <Suspense fallback={<div className="h-24 flex items-center justify-center">Loading hero...</div>}>
             <Hero 
-              backgroundImage="/lovable-uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png"
+              backgroundImage="/uploads/6edb5562-fff6-4fa7-90c6-8c9302543b87.png"
               title={<><span>Join Our Poetry Community</span><br /><span className="block text-xl md:text-2xl font-semibold text-crimson mt-2">Where Words Dance And Emotions Flow</span></>}
               subtitle="Connect with fellow poets, share your work, and engage in meaningful literary discussions."
               buttonText="Sign In"
               buttonLink="#community-auth"
             />
           </Suspense>
-        ) : (
+        ) : !isCheckingSession ? (
           <div 
             className="relative min-h-[350px] flex items-center justify-center bg-cover bg-center"
-            style={{ backgroundImage: "url('/lovable-uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png')" }}
+            style={{ backgroundImage: "url('/uploads/eb0ae85c-cc80-479e-bbfc-354ecf4178a5.png')" }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60"></div>
             <div className="container mx-auto px-4 z-10 pt-16 text-center">
@@ -77,11 +106,11 @@ const Community = () => {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Main Content */}
         <div className="relative">
-          {!isAuthenticated ? (
+          {!isCheckingSession && !isAuthenticated ? (
             <div className="container mx-auto px-4 py-16">
               <div id="community-auth" className="max-w-lg mx-auto">
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 p-8">
@@ -89,11 +118,11 @@ const Community = () => {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : !isCheckingSession ? (
             <Suspense fallback={<div className="h-24 flex items-center justify-center">Loading community...</div>}>
               <CommunityMemberView userData={userData!} onSignOut={handleSignOut} />
             </Suspense>
-          )}
+          ) : null}
         </div>
       </div>
     </ThemeProvider>

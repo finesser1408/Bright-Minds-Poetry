@@ -1,10 +1,7 @@
-
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { PoemCard } from "./PoemCard";
-import { Search, TrendingUp, Clock, Heart, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface CommunityFeedProps {
   currentUser: string;
@@ -17,122 +14,117 @@ export const CommunityFeed = ({ currentUser }: CommunityFeedProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    import("@/lib/api").then(({ fetchPoems }) => {
-      fetchPoems().then(res => {
-        setPoems(res.data);
+    const loadFeed = async () => {
+      try {
+        const { fetchPoems } = await import("@/lib/api");
+        const res = await fetchPoems();
+        setPoems(res.data || []);
+      } catch (err) {
+        console.error("Failed to fetch gallery items.");
+      } finally {
         setLoading(false);
-      }).catch(() => setLoading(false));
-    });
+      }
+    };
+    loadFeed();
   }, []);
 
-  const filteredPoems = poems.filter(poem =>
-    poem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    poem.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (poem.content || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const sortedAndFilteredPoems = useMemo(() => {
+    const filtered = poems.filter(poem =>
+      (poem.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (poem.author || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (poem.content || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-  const sortedPoems = [...filteredPoems].sort((a, b) => {
-    switch (sortBy) {
-      case "popular":
-        return (b.likes?.length || 0) - (a.likes?.length || 0);
-      case "trending":
-        return ((b.likes?.length || 0) + (b.comments?.length || 0)) - ((a.likes?.length || 0) + (a.comments?.length || 0));
-      default:
-        return (new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    }
-  });
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "popular":
+          return (b.likes_count || 0) - (a.likes_count || 0);
+        case "trending":
+          return ((b.likes_count || 0) + (b.comments_list?.length || 0)) - ((a.likes_count || 0) + (a.comments_list?.length || 0));
+        default:
+          return (new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
+    });
+  }, [poems, searchQuery, sortBy, currentUser]);
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Feed Header */}
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Sparkles className="text-crimson animate-pulse" size={24} />
-          <h2 className="text-3xl font-playfair font-bold bg-gradient-to-r from-crimson to-pink-600 bg-clip-text text-transparent">
-            Poetry Community
-          </h2>
-          <Sparkles className="text-crimson animate-pulse" size={24} />
+    <div className="max-w-4xl mx-auto space-y-12">
+      {/* Search and Navigation Bar */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md py-6 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
+
+          {/* Refined Search */}
+          <div className="relative w-full md:max-w-sm">
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+            <Input
+              placeholder="Search by title, author, or verse..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 border-none bg-transparent focus-visible:ring-0 text-base placeholder:text-zinc-300 italic font-serif"
+            />
+          </div>
+
+          {/* Segmented Sort Control */}
+          <div className="flex bg-zinc-50 p-1 rounded-full border border-zinc-100">
+            {(["recent", "popular", "trending"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setSortBy(mode)}
+                className={`px-6 py-1.5 rounded-full text-[10px] uppercase tracking-[0.15em] font-bold transition-all ${sortBy === mode
+                    ? "bg-zinc-900 text-white shadow-md"
+                    : "text-zinc-400 hover:text-zinc-600"
+                  }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="text-muted-foreground text-lg">
-          Discover, engage, and be inspired by our talented community of writers
-        </p>
       </div>
 
-      {/* Search and Filter */}
-      <Card className="border-2 border-muted/50 shadow-lg bg-gradient-to-r from-white/90 to-muted/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
-              <Input
-                placeholder="Search for poems, poets, or dive into content..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 pr-4 py-3 text-base border-2 border-muted/30 rounded-xl focus:border-crimson/50 bg-white/80"
-              />
-            </div>
-            <div className="flex gap-2 w-full lg:w-auto">
-              <Button
-                variant={sortBy === "recent" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSortBy("recent")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
-                  sortBy === "recent" 
-                    ? "bg-crimson hover:bg-crimson/90 text-white shadow-lg" 
-                    : "hover:bg-muted/50 border-2"
-                }`}
-              >
-                <Clock size={16} />
-                Recent
-              </Button>
-              <Button
-                variant={sortBy === "popular" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSortBy("popular")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
-                  sortBy === "popular" 
-                    ? "bg-crimson hover:bg-crimson/90 text-white shadow-lg" 
-                    : "hover:bg-muted/50 border-2"
-                }`}
-              >
-                <Heart size={16} />
-                Popular
-              </Button>
-              <Button
-                variant={sortBy === "trending" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSortBy("trending")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
-                  sortBy === "trending" 
-                    ? "bg-crimson hover:bg-crimson/90 text-white shadow-lg" 
-                    : "hover:bg-muted/50 border-2"
-                }`}
-              >
-                <TrendingUp size={16} />
-                Trending
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Poems Feed */}
-      <div className="space-y-6">
-        {sortedPoems.length > 0 ? (
-          sortedPoems.map((poem, index) => (
-            <div key={poem.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+      <div className="space-y-20">
+        {loading ? (
+          <div className="space-y-12 py-10">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse space-y-4">
+                <div className="h-8 bg-zinc-50 w-1/3 rounded" />
+                <div className="h-24 bg-zinc-50 w-full rounded" />
+              </div>
+            ))}
+          </div>
+        ) : sortedAndFilteredPoems.length > 0 ? (
+          sortedAndFilteredPoems.map((poem, index) => (
+            <div
+              key={poem.id}
+              className="animate-in fade-in slide-in-from-bottom-6 duration-700 fill-mode-both"
+              style={{ animationDelay: `${index * 150}ms` }}
+            >
               <PoemCard poem={poem} currentUser={currentUser} />
             </div>
           ))
         ) : (
-          <Card className="border-2 border-dashed border-muted/50 bg-muted/10">
-            <CardContent className="text-center py-16">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-xl font-playfair font-semibold mb-2">No poems found</h3>
-              <p className="text-muted-foreground">Try adjusting your search terms or explore different categories.</p>
-            </CardContent>
-          </Card>
+          <div className="py-32 text-center border-2 border-dashed border-zinc-100 rounded-[2rem]">
+            <h3 className="text-2xl font-serif text-zinc-900 mb-2">No results found</h3>
+            <p className="text-zinc-400 font-medium">Your search did not match any works in the current collection.</p>
+            <button
+              onClick={() => setSearchQuery("")}
+              className="mt-6 text-sm font-bold uppercase tracking-widest text-zinc-900 underline underline-offset-4"
+            >
+              Clear filters
+            </button>
+          </div>
         )}
+      </div>
+
+      {/* Footer Counter */}
+      <div className="pt-12 border-t border-zinc-100 flex justify-between items-center text-zinc-400">
+        <span className="text-[10px] uppercase tracking-widest font-bold">
+          End of Collection
+        </span>
+        <span className="font-mono text-xs italic">
+          {sortedAndFilteredPoems.length} Items Displayed
+        </span>
       </div>
     </div>
   );

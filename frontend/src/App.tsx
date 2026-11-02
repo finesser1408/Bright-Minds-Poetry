@@ -11,6 +11,10 @@ import Gallery from "./pages/Gallery";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Community from "./pages/Community";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import AuthEmailFlow from "./components/community/AuthEmailFlow";
+import ContactWhatsAppButton from "./components/community/ContactWhatsAppButton";
 
 const queryClient = new QueryClient();
 
@@ -27,9 +31,15 @@ const App = () => (
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/community" element={<Community />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<AuthEmailFlow mode="forgot" />} />
+          <Route path="/reset-password" element={<AuthEmailFlow mode="reset" />} />
+          <Route path="/verify-email" element={<AuthEmailFlow mode="verify" />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <ContactWhatsAppButton />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

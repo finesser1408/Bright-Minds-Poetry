@@ -20,6 +20,7 @@ const Footer = () => {
               <SocialIcon icon={<SiTiktok size={20} />} href="https://www.tiktok.com/@brightminds748" />
               <SocialIcon icon={<FaInstagram size={20} />} href="https://instagram.com/bri.ghtmindspoetry" />
               <SocialIcon icon={<Mail size={20} />} href="mailto:brightmindspoetry1408@gmail.com" />
+              <SocialIcon icon={<span aria-hidden="true">WA</span>} href="https://wa.me/263715503026" />
             </div>
           </div>
           
@@ -37,10 +38,10 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-playfair font-bold mb-4">Contact Us</h4>
             <ul className="space-y-3 text-white/80">
-              <li>Phone: +263 71 550 3026</li>
+              <li><a className="hover:text-white" href="https://wa.me/263715503026">WhatsApp: +263 71 550 3026</a></li>
               <li>Phone: +263 778 203 483</li>
               <li>Phone: +263 711 611 961</li>
-              <li>Email: brightmindspoetry1408@gmail.com</li>
+              <li><a className="hover:text-white" href="mailto:brightmindspoetry1408@gmail.com">Email: brightmindspoetry1408@gmail.com</a></li>
             </ul>
           </div>
         </div>

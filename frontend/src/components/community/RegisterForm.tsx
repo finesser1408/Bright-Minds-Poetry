@@ -63,19 +63,34 @@ export const RegisterForm = ({ onAuthenticated, onSwitchToLogin }: RegisterFormP
         first_name: formData.firstName,
         last_name: formData.lastName,
       })
-        .then(() => {
+        .then((response) => {
           setIsLoading(false);
           toast({
-            title: "Account created!",
-            description: "Your account has been created successfully.",
+            title: "Check your email",
+            description: response.data.detail || "We sent you a verification link before your first sign in.",
           });
-          onAuthenticated({ name: formData.username, email: formData.email });
+          onSwitchToLogin();
         })
-        .catch(() => {
+        .catch((error) => {
           setIsLoading(false);
+          const data = error.response?.data;
+          let message = "Please check your details and try again.";
+          if (data) {
+            const messages: string[] = [];
+            for (const [field, errors] of Object.entries(data)) {
+              if (Array.isArray(errors)) {
+                messages.push(errors.join(" "));
+              } else if (typeof errors === "string") {
+                messages.push(errors);
+              }
+            }
+            if (messages.length > 0) {
+              message = messages.join("\n");
+            }
+          }
           toast({
             title: "Registration failed",
-            description: "Please check your details and try again.",
+            description: message,
             variant: "destructive",
           });
         });
