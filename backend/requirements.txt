@@ -6,3 +6,4 @@ djangorestframework-simplejwt
 django-allauth
 requests
 pillow
+psycopg2-binary

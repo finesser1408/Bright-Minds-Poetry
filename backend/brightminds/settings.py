@@ -21,18 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7nr@*=2&jn1aljizohr4&eb$q0!il0x_wss-mg0iw=39-r6u8t'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
+# Production deploys must explicitly provide a high-entropy secret and allowed hosts.
+DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-development-only-change-me" if DEBUG else "")
+if not DEBUG and not SECRET_KEY:
+    raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false")
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1" if DEBUG else "").split(",") if host.strip()]
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8080")
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080").split(",") if origin.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -109,19 +105,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'brightminds.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'BrightMinds',
-        'USER': 'postgres',
-        'PASSWORD': 'Allan06!',
-        'HOST': 'localhost',
-        'PORT': '5432',
+# SQLite is for local development. Production uses PostgreSQL configured by environment.
+if os.environ.get("DATABASE_URL"):
+    from urllib.parse import urlparse
+    database_url = urlparse(os.environ["DATABASE_URL"])
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": database_url.path.lstrip("/"),
+            "USER": database_url.username,
+            "PASSWORD": database_url.password,
+            "HOST": database_url.hostname,
+            "PORT": database_url.port or 5432,
+            "OPTIONS": {"sslmode": os.environ.get("DB_SSLMODE", "require")},
+        }
     }
-}
+else:
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
 
 # Password validation
@@ -171,20 +171,37 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
-# For production, use SMTP backend:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your-app-password-or-smtp-password'
-DEFAULT_FROM_EMAIL = 'noreply@brightmindspoetry.com'
+# Uploaded files are capped at the supported 50 MiB maximum.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+if not DEBUG:
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# SMTP credentials are supplied through environment only, never source control.
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@brightmindspoetry.com")
+CONTACT_RECIPIENT_EMAIL = os.environ.get("CONTACT_RECIPIENT_EMAIL", "brightmindspoetry1408@gmail.com")
 
 SITE_ID = 1
-
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+ACCOUNT_UNIQUE_EMAIL = True
 
 AUTHENTICATION_BACKENDS = [
     'api.authentication.UsernameOrEmailBackend',
@@ -193,14 +210,40 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticatedOrReadOnly",),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {"anon": "100/hour", "user": "1000/hour", "auth": "10/hour"},
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 REST_AUTH = {
-    'USE_JWT': True,
-    'JWT_AUTH_COOKIE': 'my-app-auth',
-    'JWT_AUTH_REFRESH_COOKIE': 'my-app-refresh-token',
-    'TOKEN_MODEL': None,
+    "USE_JWT": True,
+    "JWT_AUTH_COOKIE": "my-app-auth",
+    "JWT_AUTH_REFRESH_COOKIE": "my-app-refresh-token",
+    "JWT_AUTH_HTTPONLY": True,
+    "JWT_AUTH_SECURE": not DEBUG,
+    "JWT_AUTH_SAMESITE": "Lax",
+    "JWT_AUTH_COOKIE_USE_CSRF": True,
+    "JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED": False,
+    "JWT_AUTH_COOKIE_DOMAIN": None,
+    "TOKEN_MODEL": None,
+    "REGISTER_SERIALIZER": "api.serializers.SecureRegisterSerializer",
 }
+ACCOUNT_ADAPTER = "api.adapters.VerifiedEmailAccountAdapter"
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/community"
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/community"

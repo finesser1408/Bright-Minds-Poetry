@@ -10,17 +10,18 @@ class Poem(models.Model):
         ("document", "Document"),
     ]
     title = models.CharField(max_length=200, blank=True, null=True)
-    author = models.CharField(max_length=100, blank=True, null=True)
+    author = models.CharField(max_length=150, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default="text")
     media_file = models.FileField(upload_to="poem_media/", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.title
+        return self.title or "Untitled poem"
 
 class Like(models.Model):
     poem = models.ForeignKey(Poem, on_delete=models.CASCADE, related_name='likes')
-    user = models.CharField(max_length=100, blank=True, null=True)  # Replace with ForeignKey if you have a User model
+    user = models.CharField(max_length=150, blank=True, null=True)  # Authenticated username set by the API
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -28,7 +29,7 @@ class Like(models.Model):
 
 class Comment(models.Model):
     poem = models.ForeignKey(Poem, on_delete=models.CASCADE, related_name='comments')
-    user = models.CharField(max_length=100, blank=True, null=True)  # Replace with ForeignKey if you have a User model
+    user = models.CharField(max_length=150, blank=True, null=True)  # Authenticated username set by the API
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -36,7 +37,7 @@ class Comment(models.Model):
         return f"{self.user} on {self.poem.title}: {self.content[:20]}"
 
 class Message(models.Model):
-    name = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=100)
     email = models.EmailField()
     subject = models.CharField(max_length=200)
     content = models.TextField()
@@ -96,3 +97,17 @@ class GalleryItem(models.Model):
     
     def __str__(self):
         return f"{self.get_item_type_display()}: {self.title}"
+
+# Signals to create/save profile when user is created
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    if hasattr(instance, 'profile'):
+        instance.profile.save()

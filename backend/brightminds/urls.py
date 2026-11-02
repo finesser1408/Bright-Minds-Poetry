@@ -19,10 +19,24 @@ from django.urls import path, include
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
+from api.auth_views import ForgotPasswordView, ResetPasswordView
+from django.http import JsonResponse
+from dj_rest_auth.registration.views import VerifyEmailView
+
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+@ensure_csrf_cookie
+def csrf_token_view(request):
+    return JsonResponse({"csrfToken": get_token(request)})
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name='landing.html'), name='landing'),
     path('admin/', admin.site.urls),
+    path('api/csrf/', csrf_token_view, name='csrf-token'),
+    path('api/auth/verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+    path('api/auth/forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('api/auth/reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
     path('api/', include('api.urls')),
